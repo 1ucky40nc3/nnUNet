@@ -42,7 +42,7 @@ class nnUNetTrainerV2(nnUNetTrainer):
     """
 
     def __init__(self, plans_file, fold, output_folder=None, dataset_directory=None, batch_dice=True, stage=None,
-                 unpack_data=True, deterministic=True, fp16=False, pin_memory=True):
+                 unpack_data=True, deterministic=True, fp16=False, pin_memory=True, convert_to_tensor=False):
         super().__init__(plans_file, fold, output_folder, dataset_directory, batch_dice, stage, unpack_data,
                          deterministic, fp16)
         self.max_num_epochs = 1000
@@ -51,6 +51,7 @@ class nnUNetTrainerV2(nnUNetTrainer):
         self.ds_loss_weights = None
 
         self.pin_memory = pin_memory
+        self.convert_to_tensor = convert_to_tensor
 
     def initialize(self, training=True, force_load_plans=False, only_dl=False):
         """
@@ -109,6 +110,7 @@ class nnUNetTrainerV2(nnUNetTrainer):
                     self.data_aug_params,
                     deep_supervision_scales=self.deep_supervision_scales,
                     pin_memory=self.pin_memory,
+                    convert_to_tensor=self.convert_to_tensor,
                     use_nondetMultiThreadedAugmenter=False
                 )
                 self.print_to_log_file("TRAINING KEYS:\n %s" % (str(self.dataset_tr.keys())),
