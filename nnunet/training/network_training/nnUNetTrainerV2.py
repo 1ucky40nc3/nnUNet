@@ -53,7 +53,7 @@ class nnUNetTrainerV2(nnUNetTrainer):
         self.pin_memory = pin_memory
         self.convert_to_tensor = convert_to_tensor
 
-    def initialize(self, training=True, force_load_plans=False, only_dl=False):
+    def initialize(self, training=True, force_load_plans=False, only_dl=False, batch_size=None):
         """
         - replaced get_default_augmentation with get_moreDA_augmentation
         - enforce to only run this code once
@@ -69,7 +69,7 @@ class nnUNetTrainerV2(nnUNetTrainer):
             if force_load_plans or (self.plans is None):
                 self.load_plans_file()
 
-            self.process_plans(self.plans)
+            self.process_plans(self.plans, batch_size=batch_size)
 
             self.setup_DA_params()
 

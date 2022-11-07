@@ -185,7 +185,7 @@ class nnUNetTrainer(NetworkTrainer):
         self.data_aug_params['selected_seg_channels'] = [0]
         self.data_aug_params['patch_size_for_spatialtransform'] = self.patch_size
 
-    def initialize(self, training=True, force_load_plans=False):
+    def initialize(self, training=True, force_load_plans=False, batch_size=None):
         """
         For prediction of test cases just set training=False, this will prevent loading of training data and
         training batchgenerator initialization
@@ -198,7 +198,7 @@ class nnUNetTrainer(NetworkTrainer):
         if force_load_plans or (self.plans is None):
             self.load_plans_file()
 
-        self.process_plans(self.plans)
+        self.process_plans(self.plans, batch_size=batch_size)
 
         self.setup_DA_params()
 
@@ -324,7 +324,7 @@ class nnUNetTrainer(NetworkTrainer):
         """
         self.plans = load_pickle(self.plans_file)
 
-    def process_plans(self, plans):
+    def process_plans(self, plans, batch_size=None):
         if self.stage is None:
             assert len(list(plans['plans_per_stage'].keys())) == 1, \
                 "If self.stage is None then there can be only one stage in the plans file. That seems to not be the " \
@@ -333,7 +333,7 @@ class nnUNetTrainer(NetworkTrainer):
         self.plans = plans
 
         stage_plans = self.plans['plans_per_stage'][self.stage]
-        self.batch_size = stage_plans['batch_size']
+        self.batch_size = batch_size or stage_plans['batch_size']
         self.net_pool_per_axis = stage_plans['num_pool_per_axis']
         self.patch_size = np.array(stage_plans['patch_size']).astype(int)
         self.do_dummy_2D_aug = stage_plans['do_dummy_2D_data_aug']
