@@ -53,7 +53,15 @@ class nnUNetTrainerV2(nnUNetTrainer):
         self.pin_memory = pin_memory
         self.convert_to_tensor = convert_to_tensor
 
-    def initialize(self, training=True, force_load_plans=False, only_dl=False, batch_size=None):
+    def initialize(
+        self, 
+        training=True, 
+        force_load_plans=False, 
+        init_data=True, 
+        batch_size=None, 
+        init_model=True,
+        init_optim=True
+    ):
         """
         - replaced get_default_augmentation with get_moreDA_augmentation
         - enforce to only run this code once
@@ -93,38 +101,40 @@ class nnUNetTrainerV2(nnUNetTrainer):
             self.folder_with_preprocessed_data = join(self.dataset_directory, self.plans['data_identifier'] +
                                                       "_stage%d" % self.stage)
             if training:
-                self.dl_tr, self.dl_val = self.get_basic_generators()
-                if self.unpack_data:
-                    print("unpacking dataset")
-                    unpack_dataset(self.folder_with_preprocessed_data)
-                    print("done")
-                else:
-                    print(
-                        "INFO: Not unpacking data! Training may be slow due to that. Pray you are not using 2d or you "
-                        "will wait all winter for your model to finish!")
+                if init_data:
+                    self.dl_tr, self.dl_val = self.get_basic_generators()
+                    if self.unpack_data:
+                        print("unpacking dataset")
+                        unpack_dataset(self.folder_with_preprocessed_data)
+                        print("done")
+                    else:
+                        print(
+                            "INFO: Not unpacking data! Training may be slow due to that. Pray you are not using 2d or you "
+                            "will wait all winter for your model to finish!")
 
-                self.tr_gen, self.val_gen = get_moreDA_augmentation(
-                    self.dl_tr, self.dl_val,
-                    self.data_aug_params[
-                        'patch_size_for_spatialtransform'],
-                    self.data_aug_params,
-                    deep_supervision_scales=self.deep_supervision_scales,
-                    pin_memory=self.pin_memory,
-                    convert_to_tensor=self.convert_to_tensor,
-                    use_nondetMultiThreadedAugmenter=False
-                )
-                self.print_to_log_file("TRAINING KEYS:\n %s" % (str(self.dataset_tr.keys())),
-                                       also_print_to_console=False)
-                self.print_to_log_file("VALIDATION KEYS:\n %s" % (str(self.dataset_val.keys())),
-                                       also_print_to_console=False)
+                    self.tr_gen, self.val_gen = get_moreDA_augmentation(
+                        self.dl_tr, self.dl_val,
+                        self.data_aug_params[
+                            'patch_size_for_spatialtransform'],
+                        self.data_aug_params,
+                        deep_supervision_scales=self.deep_supervision_scales,
+                        pin_memory=self.pin_memory,
+                        convert_to_tensor=self.convert_to_tensor,
+                        use_nondetMultiThreadedAugmenter=False
+                    )
+                    self.print_to_log_file("TRAINING KEYS:\n %s" % (str(self.dataset_tr.keys())),
+                                        also_print_to_console=False)
+                    self.print_to_log_file("VALIDATION KEYS:\n %s" % (str(self.dataset_val.keys())),
+                                        also_print_to_console=False)
             else:
                 pass
 
-            if not only_dl:
+            if init_model:
                 self.initialize_network()
+                assert isinstance(self.network, (SegmentationNetwork, nn.DataParallel))
+            if init_optim:
                 self.initialize_optimizer_and_scheduler()
 
-                assert isinstance(self.network, (SegmentationNetwork, nn.DataParallel))
         else:
             self.print_to_log_file('self.was_initialized is True, not running self.initialize again')
         self.was_initialized = True
