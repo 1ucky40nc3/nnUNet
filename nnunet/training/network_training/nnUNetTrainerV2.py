@@ -60,7 +60,8 @@ class nnUNetTrainerV2(nnUNetTrainer):
         init_data=True, 
         batch_size=None, 
         init_model=True,
-        init_optim=True
+        init_optim=True,
+        return_untransformed=False
     ):
         """
         - replaced get_default_augmentation with get_moreDA_augmentation
@@ -120,7 +121,8 @@ class nnUNetTrainerV2(nnUNetTrainer):
                         deep_supervision_scales=self.deep_supervision_scales,
                         pin_memory=self.pin_memory,
                         convert_to_tensor=self.convert_to_tensor,
-                        use_nondetMultiThreadedAugmenter=False
+                        use_nondetMultiThreadedAugmenter=False,
+                        return_untransformed=return_untransformed
                     )
                     self.print_to_log_file("TRAINING KEYS:\n %s" % (str(self.dataset_tr.keys())),
                                         also_print_to_console=False)
