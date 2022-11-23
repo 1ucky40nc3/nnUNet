@@ -112,18 +112,18 @@ class nnUNetTrainerV2(nnUNetTrainer):
                         print(
                             "INFO: Not unpacking data! Training may be slow due to that. Pray you are not using 2d or you "
                             "will wait all winter for your model to finish!")
-
-                    self.tr_gen, self.val_gen = get_moreDA_augmentation(
-                        self.dl_tr, self.dl_val,
-                        self.data_aug_params[
-                            'patch_size_for_spatialtransform'],
-                        self.data_aug_params,
+                    args = self.dl_tr, self.dl_val, self.data_aug_params['patch_size_for_spatialtransform'], self.data_aug_params
+                    kwargs = dict(
                         deep_supervision_scales=self.deep_supervision_scales,
                         pin_memory=self.pin_memory,
                         convert_to_tensor=self.convert_to_tensor,
                         use_nondetMultiThreadedAugmenter=False,
                         return_untransformed=return_untransformed
                     )
+                    if return_untransformed:
+                        self.tr_gen, self.val_gen, self.un_gen = get_moreDA_augmentation(*args, **kwargs)
+                    else:
+                        self.tr_gen, self.val_gen = get_moreDA_augmentation(*args, **kwargs)
                     self.print_to_log_file("TRAINING KEYS:\n %s" % (str(self.dataset_tr.keys())),
                                         also_print_to_console=False)
                     self.print_to_log_file("VALIDATION KEYS:\n %s" % (str(self.dataset_val.keys())),
