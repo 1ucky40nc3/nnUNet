@@ -56,30 +56,25 @@ def get_moreDA_augmentation(
     pin_memory=True,
     convert_to_tensor=True,
     regions=None,
-    use_nondetMultiThreadedAugmenter: bool = False,
-    return_untransformed: bool = False):
+    use_nondetMultiThreadedAugmenter: bool = False):
     assert params.get('mirror') is None, "old version of params, use new keyword do_mirror"
     pin_memory = pin_memory if convert_to_tensor else False
 
     tr_transforms = []
-    un_transforms = []
 
     if params.get("selected_data_channels") is not None:
         data_channel_selection_transform = DataChannelSelectionTransform(params.get("selected_data_channels"))
         tr_transforms.append(data_channel_selection_transform)
-        un_transforms.append(data_channel_selection_transform)
 
     if params.get("selected_seg_channels") is not None:
         seg_channel_selection_transform = SegChannelSelectionTransform(params.get("selected_seg_channels"))
         tr_transforms.append(seg_channel_selection_transform)
-        un_transforms.append(seg_channel_selection_transform)
 
     # don't do color augmentations while in 2d mode with 3d data because the color channel is overloaded!!
     if params.get("dummy_2D") is not None and params.get("dummy_2D"):
         ignore_axes = (0,)
         convert_3d_to_2d_transform = Convert3DTo2DTransform()
         tr_transforms.append(convert_3d_to_2d_transform)
-        un_transforms.append(convert_3d_to_2d_transform)
         patch_size_spatial = patch_size[1:]
     else:
         patch_size_spatial = patch_size
@@ -112,12 +107,10 @@ def get_moreDA_augmentation(
     )
 
     tr_transforms.append(spatial_transform)
-    un_transforms.append(spatial_transform)
 
     if params.get("dummy_2D"):
         convert_2d_to_3d_transform = Convert2DTo3DTransform()
         tr_transforms.append(convert_2d_to_3d_transform)
-        un_transforms.append(convert_2d_to_3d_transform)
 
     # we need to put the color augmentations after the dummy 2d part (if applicable). Otherwise the overloaded color
     # channel gets in the way
@@ -161,17 +154,14 @@ def get_moreDA_augmentation(
     if params.get("do_mirror") or params.get("mirror"):
         mirror_transform = MirrorTransform(params.get("mirror_axes"))
         tr_transforms.append(mirror_transform)
-        un_transforms.append(mirror_transform)
 
     if params.get("mask_was_used_for_normalization") is not None:
         mask_was_used_for_normalization = params.get("mask_was_used_for_normalization")
         mask_transform = MaskTransform(mask_was_used_for_normalization, mask_idx_in_seg=0, set_outside_to=0)
         tr_transforms.append(mask_transform)
-        un_transforms.append(mask_transform)
 
     remove_label_transform = RemoveLabelTransform(-1, 0)
     tr_transforms.append(remove_label_transform)
-    un_transforms.append(remove_label_transform)
 
     if params.get("move_last_seg_chanel_to_data") is not None and params.get("move_last_seg_chanel_to_data"):
         tr_transforms.append(MoveSegAsOneHotToData(1, params.get("all_segmentation_labels"), 'seg', 'data'))
@@ -196,12 +186,10 @@ def get_moreDA_augmentation(
 
     rename_transform = RenameTransform('seg', 'target', True)
     tr_transforms.append(rename_transform)
-    un_transforms.append(rename_transform)
 
     if regions is not None:
         convert_segmentation_to_regions_transform = ConvertSegmentationToRegionsTransform(regions, 'target', 'target')
         tr_transforms.append(convert_segmentation_to_regions_transform)
-        un_transforms.append(convert_segmentation_to_regions_transform)
 
     if deep_supervision_scales is not None:
         if soft_ds:
@@ -211,22 +199,18 @@ def get_moreDA_augmentation(
                                                                              'target', 
                                                                              classes)
             tr_transforms.append(downsample_seg_for_ds_transform_3)
-            un_transforms.append(downsample_seg_for_ds_transform_3)
         else:
             downsample_seg_for_ds_transform_2 = DownsampleSegForDSTransform2(deep_supervision_scales, 
                                                                              0, 
                                                                              input_key='target',
                                                                              output_key='target')
             tr_transforms.append(downsample_seg_for_ds_transform_2)
-            un_transforms.append(downsample_seg_for_ds_transform_2)
 
     if convert_to_tensor:
         numpy_to_tensor = NumpyToTensor(['data', 'target'], 'float')
         tr_transforms.append(numpy_to_tensor)
-        un_transforms.append(numpy_to_tensor)
 
     tr_transforms = Compose(tr_transforms)
-    un_transforms = Compose(un_transforms)
 
     args = (dataloader_train, tr_transforms, params.get('num_threads'), params.get("num_cached_per_thread"))
     kwargs = dict(seeds=seeds_train, pin_memory=pin_memory)
@@ -235,10 +219,8 @@ def get_moreDA_augmentation(
             raise RuntimeError('NonDetMultiThreadedAugmenter is not yet available')
 
         batchgenerator_train = NonDetMultiThreadedAugmenter(*args, **kwargs)
-        batchgenerator_untransformed = NonDetMultiThreadedAugmenter(*args, **kwargs)
     else:
         batchgenerator_train = MultiThreadedAugmenter(*args, **kwargs)
-        batchgenerator_untransformed = NonDetMultiThreadedAugmenter(*args, **kwargs)
 
     # batchgenerator_train = SingleThreadedAugmenter(dataloader_train, tr_transforms)
     # import IPython;IPython.embed()
@@ -290,7 +272,5 @@ def get_moreDA_augmentation(
             pin_memory=pin_memory)
     # batchgenerator_val = SingleThreadedAugmenter(dataloader_val, val_transforms)
 
-    if return_untransformed:
-        batchgenerator_train, batchgenerator_val, batchgenerator_untransformed
     return batchgenerator_train, batchgenerator_val
 
